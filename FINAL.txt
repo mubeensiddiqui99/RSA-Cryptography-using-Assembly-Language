@@ -1,0 +1,285 @@
+TITLE RSA(RSA.asm)
+INCLUDE Irvine32.inc
+.data
+AskP byte "Enter Value for P:",0
+AskQ byte "Enter Value for Q:",0
+printn byte "Value of n=",0
+printk byte "Value of K=",0
+printd byte "Value of D=",0
+AskE byte "Choose e,such that e<k and e>1 and gcd(e,k)=1:",0
+AskE1 byte "Invalid e, please choose again",0
+printfinal byte "Value of e is acceptable",0
+space byte " ",0
+p dword ?
+q dword ?
+n dword ?
+n1 dword ?
+k dword ?
+e dword ?
+d sdword ?
+c1 dword ?
+b1 dword ?
+gcd1 dword ?
+ans dword 1
+msgbuffer byte 100 dup(?)
+msgencrypt dword 100 DUP(?)
+bytecount dword ?
+modPower proto x:dword, y:dword, p:dword,ans1:dword
+
+GCD proto var1:dword, var2:dword
+calculateD proto a:dword, m:dword
+.code
+main PROC
+    call mainmenu
+    mov edx,offset AskP
+    call writestring
+    call readdec
+    mov p,eax
+    call crlf
+    mov edx,offset AskQ
+    call writestring 
+    call readdec
+    mov q,eax
+    mul p
+    mov n,eax
+    mov n1,eax
+    mov edx,offset printn
+    call writestring
+    call writedec
+    call crlf
+    sub p,1
+    sub q,1
+    mov eax,p   
+    mul q
+    mov k,eax
+    mov edx,offset printk
+    call writestring
+    call writedec
+    call crlf
+repeat1:
+    mov edx,offset AskE
+    call writestring
+    call readdec
+    mov e,eax
+    cmp eax,k
+    jc l1
+    jnc repeat1
+    l1:
+    cmp eax,1
+    ja l3
+jmp repeat1
+l3:
+    invoke GCD,k,e          ;GCD CALLED
+	;add esp,8
+	call crlf
+	;call writedec
+    mov gcd1,eax
+	cmp eax,1
+    je final
+    mov edx,offset AskE1
+    call writestring
+    call crlf
+	jne repeat1
+    final:
+    mov edx,offset printfinal
+    call crlf
+    call writestring 
+    invoke calculateD, e,k
+    call crlf
+    mov edx,offset printd
+    call writestring
+    mov d,eax
+    call writedec
+    call crlf
+    call clrscr
+    mov esi,offset msgbuffer
+    mov edi,offset msgencrypt		
+l11:
+
+lodsb																;al,[esi]
+																	;add esi,1
+cmp al,0
+je l2
+movzx eax,al
+mov b1,eax
+invoke modPower , b1,e,n1,ans
+add esp,16
+call writedec
+mov edx,offset space
+call writestring
+mov c1,eax
+stosd																;[edi],eax
+																	;add edi,4
+jmp l11
+																	
+l2:
+call crlf
+mov esi,offset msgencrypt
+lodsd																;eax,[esi]
+l13:
+cmp eax,0
+je ret1
+invoke modPower, eax,d,n1,ans
+;call crlf
+;call writedec
+;mov edx,offset space
+call writechar
+
+;call writestring
+lodsd																;mov eax,[esi]
+jmp l13
+												
+
+ret1:
+call DumpRegs
+exit
+main ENDP
+
+GCD proc,x1:dword,y1:dword
+    top:
+    mov edx,0
+    mov eax,x1
+    div y1
+    mov n,edx
+    mov eax,y1
+    mov x1,eax
+    mov eax,n
+    mov y1,eax
+    cmp y1,0
+    jc l1
+    jz l1
+    jmp top
+    l1:
+    mov eax,x1
+    ret
+call DumpRegs
+GCD ENDP
+
+mainmenu PROC 
+.data
+askchoice byte "Press 1 to Encrypt a message",13,10
+          byte "Press 2 to decrypt a message",13,10
+          byte "Enter your choice: " ,0     
+
+askmessage byte "Enter Message to Encrypt:",0
+choice dword ?
+
+
+.code
+top:
+    mov edx,offset askchoice 
+    call writestring
+    call readdec
+    call clrscr
+    cmp eax,1
+    je encrypt
+    cmp eax,2
+    je decrypt
+    jne top
+encrypt:
+    mov edx,offset askmessage
+    call writestring
+    mov  edx,offset msgbuffer
+	mov  ecx,sizeof msgbuffer
+	call readstring
+    mov bytecount,eax
+    ret
+decrypt:
+call DumpRegs
+mainmenu ENDP
+
+calculateD PROC, a:dword,m:dword  ;Private key generation 
+.data
+m0 sdword ?
+y sdword 0
+x sdword 1
+qt sdword ?
+t sdword ?
+a1 sdword ?
+m1 sdword ?
+.code
+    mov eax,m
+    mov m1,eax
+    mov m0,eax
+    mov eax,a
+    mov a1,eax
+    cmp m1,1
+    je ret1
+top:
+    cmp a1,1
+    jbe exitloop
+    mov edx,0
+    mov eax,a1
+    cdq
+    idiv m1
+    mov qt,eax
+    mov eax,m1
+    mov t,eax
+    ;mov a,eax
+    ;mov edx,0
+    ;div m
+    mov m1,edx       ;m contains remainder
+    mov eax,t
+    mov a1,eax
+    mov eax,y
+    mov t,eax
+    mov eax,qt
+    imul y
+    mov ebx,x
+    sub ebx,eax
+    mov y,ebx
+    mov eax,t
+    mov x,eax
+    jmp top
+exitloop:
+    cmp x,0
+    jae ret1
+    mov eax,x
+    add eax,m0
+ret1:
+    mov eax,x
+    ret
+call DumpRegs
+calculateD ENDP
+modPower proc, x1:dword, y1:dword, p1:dword,ans1:dword
+mov edx,0
+mov eax,x1
+div p1
+mov x1,edx
+cmp x1,0
+jne l1
+mov eax,0
+ret
+l1:
+top:
+cmp y1,0
+jbe out1
+mov eax,y1
+mov edx,0
+mov ebx,2
+div ebx
+cmp edx,1
+jne l2
+mov edx,0
+mov eax,ans1
+mul x1
+div p1
+mov ans1,edx
+l2:
+mov edx,0
+mov eax,y1
+mov ebx,2
+div ebx
+mov y1,eax
+mov eax,x1
+mul eax
+mov edx,0
+div p1
+mov x1,edx
+jmp top
+out1:
+mov eax,ans1
+ret
+call DumpRegs
+modPower ENDP
+END main

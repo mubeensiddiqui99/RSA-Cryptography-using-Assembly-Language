@@ -1,0 +1,110 @@
+TITLE My First Program (main.asm)
+INCLUDE Irvine32.inc
+.data
+b1 dword ?
+e1 dword 11
+m1 dword 2821
+result dword ?
+d1 dword 491
+c1 dword ?
+ans dword 1
+msg1 byte "Enter Message to encrypt:",0
+space byte " ",0
+msgbuffer byte 100 DUP(?)
+msgencrypt dword 100 DUP(?)
+modPower proto x:dword, y:dword, p:dword,ans1:dword
+.code 
+main PROC
+mov edx,offset msg1
+call writestring
+mov edx,offset msgbuffer
+mov ecx,sizeof msgbuffer
+call readstring
+mov esi,offset msgbuffer
+mov edi,offset msgencrypt		
+l1:
+
+lodsb																;al,[esi]
+																	;add esi,1
+cmp al,0
+je l2
+movzx eax,al
+mov b1,eax
+invoke modPower , b1,e1,m1,ans
+add esp,16
+call writedec
+mov edx,offset space
+call writestring
+mov c1,eax
+stosd																;[edi],eax
+																	;add edi,4
+jmp l1
+																	
+l2:
+call crlf
+mov esi,offset msgencrypt
+lodsd																;eax,[esi]
+l3:
+cmp eax,0
+je ret1
+invoke modPower, eax,d1,m1,ans
+;call crlf
+;call writedec
+;mov edx,offset space
+call writechar
+
+;call writestring
+lodsd																;mov eax,[esi]
+jmp l3
+												
+
+ret1:
+call DumpRegs
+exit
+main ENDP
+
+modPower proc, x:dword, y:dword, p:dword,ans1:dword
+mov edx,0
+mov eax,x
+div p
+mov x,edx
+cmp x,0
+jne l1
+mov eax,0
+ret
+l1:
+top:
+cmp y,0
+jbe out1
+mov eax,y
+mov edx,0
+mov ebx,2
+div ebx
+cmp edx,1
+jne l2
+mov edx,0
+mov eax,ans1
+mul x
+div p
+mov ans1,edx
+l2:
+mov edx,0
+mov eax,y
+mov ebx,2
+div ebx
+mov y,eax
+mov eax,x
+mul eax
+mov edx,0
+div p
+mov x,edx
+jmp top
+out1:
+mov eax,ans1
+ret
+call DumpRegs
+modPower ENDP
+exit
+END MAIN 
+
+
